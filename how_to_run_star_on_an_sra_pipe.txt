@@ -1,0 +1,4 @@
+$ mkfifo Read_1
+$ mkfifo Read_2
+$ fastq-dump --split-files --stdout SRR768411 | awk '{print > "Read_" ( (NR-1)%8 < 4 ? 1 : 2 ) }' &
+$ STAR ....... --readFilesIn Read_1 Read_2
