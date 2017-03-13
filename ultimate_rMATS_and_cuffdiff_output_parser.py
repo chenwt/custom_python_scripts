@@ -15,6 +15,11 @@ import numpy as np
 from glob import glob
 from pandas import ExcelWriter
 
+#for debug
+#supp_folder = '/media/sam/Data2/annotations/supp_folder/'
+#cuffdiff_output_folder = 'HF_cuffdiff_2_2_1_gencode_v24_lift_37/'
+#rMATS_folder = 'HF_rMATS_3_2_5_gencode_v24_list_37_c_05/'
+
 #required functions for the script
 def parse_cuffdiff_output(cuffdiff_output_folder,supp_folder,sample_name):
     #put in the files that have the biotype, RNA binding protein, and TF ensemble gene IDs
@@ -39,7 +44,7 @@ def parse_cuffdiff_output(cuffdiff_output_folder,supp_folder,sample_name):
 def parse_rMATS_output(rMATS_folder,rot_or_junction,FDR,dPSI,average_read_count_min,sample_name):
     """Purpose of this is to take the rMATS data and put it indo pandas for filtering as novel and not novel based on the ID from the AS events as well as user called stringency filteres"""
     #first get the rot or junction file list
-    data_list = sorted(glob(rMATS_folder+'/MATS_output/*Count*'))
+    data_list = sorted(glob(rMATS_folder+'MATS_output/*Count*'))
     for item in data_list:
         if rot_or_junction == 'rot':
             if 'JunctionCountOnly' in item:
@@ -235,7 +240,19 @@ def parse_rMATS_output(rMATS_folder,rot_or_junction,FDR,dPSI,average_read_count_
 #         item.add_prefix(sample_name+'_')
         item.to_csv('rMATS_parsing/'+sample_name+'_'+'annotated_'+name_list[counter]+'_FDR_'+str(FDR)+'_dPSI_'+str(dPSI)+'_read_cutoff_'+str(average_read_count_min)+'.txt',index=False,sep='\t')
         item.to_excel(writer,index=False,sheet_name=name_list[counter],na_rep='False')
-        counter += 1   
+        counter += 1
+
+    #now move everything into an all, novel, and annotated
+    os.system('mkdir rMATS_parsing/'+sample_name+'_all')
+    os.system('mv rMATS_parsing/*all*.txt rMATS_parsing/'+sample_name+'_all')
+    os.system('mv rMATS_parsing/*all*.xlsx rMATS_parsing/'+sample_name+'_all')
+    os.system('mkdir rMATS_parsing/'+sample_name+'_novel')
+    os.system('mv rMATS_parsing/*novel*.txt rMATS_parsing/'+sample_name+'_novel')
+    os.system('mv rMATS_parsing/*novel*.xlsx rMATS_parsing/'+sample_name+'_novel')
+    os.system('mkdir rMATS_parsing/'+sample_name+'_annotated')
+    os.system('mv rMATS_parsing/*annotated*.txt rMATS_parsing/'+sample_name+'_annotated')   
+    os.system('mv rMATS_parsing/*annotated*.xlsx rMATS_parsing/'+sample_name+'_annotated')   
+
 
 #main function that will be called when you ask for it
 def main():
@@ -251,13 +268,13 @@ def main():
     parser.add_argument("-supp", "--supp_folder",  required=True,
                         help="path to folder where biotype rbp dbp text files are")
     parser.add_argument("-roj", "--rot_or_junction",  required=False,
-                        help="type rot or junction",default='junction')
+                        help="type rot or junction",default='junction',type=str)
     parser.add_argument("-fdr", "--fdr",  required=False,
-                        help="FDR",default=1)
+                        help="FDR",default=1,type=float)
     parser.add_argument("-reads", "--average_read_count_min",  required=False,
-                        help="Minimum number of inclusion + skipping reads per sample",default=0)
+                        help="Minimum number of inclusion + skipping reads per sample",default=0,type=float)
     parser.add_argument("-dpsi", "--dpsi",  required=False,
-                        help="Desired Delta PSI",default=0)
+                        help="Desired Delta PSI",default=0,type=float)
     parser.add_argument("-s", "--sample_name",  required=False,
                         help="Type the sample name that will append to output",default='sample',type=str)
 
