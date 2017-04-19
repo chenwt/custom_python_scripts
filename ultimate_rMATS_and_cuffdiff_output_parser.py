@@ -161,6 +161,41 @@ def parse_rMATS_output(rMATS_folder,rot_or_junction,FDR,dPSI,average_read_count_
     #get rid of everything past the . in the GeneID so you are just searching for ENSG# and not versions
     for item in df_list:
         item['GeneID'] = item.GeneID.str.split('.').str[0]
+
+    #Now you need to calculate the average PSI because it gives it in comma separated values
+    #Note - you need to have a way to deal with NA values in some samples. Just throw it out.
+
+    def get_mean_psi_from_dataframe_inc_level_1(row):
+        #need to account for non replicated samples - they should be read as float whereas those with multiple samples are strings?
+        if type(row['IncLevel1']) != float:
+            psi_list = row['IncLevel1'].split(',')
+            #need to account for multiple NAs that could show up
+            for item in psi_list:
+                if 'NA' in psi_list:
+                    psi_list.remove('NA')
+            psi_list_float = [float(i) for i in psi_list]
+            psi_mean = np.mean(psi_list_float)
+        else:
+            psi_mean = row['IncLevel1']
+        return(psi_mean)
+
+    def get_mean_psi_from_dataframe_inc_level_2(row):
+        #need to account for non replicated samples - they should be read as float whereas other are strings
+        if type(row['IncLevel2']) != float:
+            psi_list = row['IncLevel2'].split(',')
+            #need to account for multiple NAs that could show up
+            for item in psi_list:
+                if 'NA' in psi_list:
+                    psi_list.remove('NA')
+            psi_list_float = [float(i) for i in psi_list]
+            psi_mean = np.mean(psi_list_float)
+        else:
+            psi_mean = row['IncLevel2']
+        return(psi_mean)
+
+    for item in df_list:
+        item['IncLevel1_mean'] = item.apply(get_mean_psi_from_dataframe_inc_level_1,axis=1)
+        item['IncLevel2_mean'] = item.apply(get_mean_psi_from_dataframe_inc_level_2,axis=1)
     
     #Now add in the cuffdiff cleaned file on gene expression of these samples. Label the gene expression,biotype, rbp, or dbp identity
     
@@ -175,7 +210,7 @@ def parse_rMATS_output(rMATS_folder,rot_or_junction,FDR,dPSI,average_read_count_
     #require readcount filter that at least sample 1 AND sample 2 must meet readcount filter because you must be able to calculate a reliable delta psi
     filtered_list = []
     for item in merged_list:
-        item = item[item.FDR < FDR]
+        item = item[item.FDR <= FDR]
         item = item[item.IncLevelDifference.abs() >= dPSI]
         item = item[item.SAMPLE_1_mean_total > average_read_count_min]
         item = item[item.SAMPLE_2_mean_total > average_read_count_min]
@@ -250,8 +285,10 @@ def parse_rMATS_output(rMATS_folder,rot_or_junction,FDR,dPSI,average_read_count_
     os.system('mv rMATS_parsing/*novel*.txt rMATS_parsing/'+sample_name+'_novel')
     os.system('mv rMATS_parsing/*novel*.xlsx rMATS_parsing/'+sample_name+'_novel')
     os.system('mkdir rMATS_parsing/'+sample_name+'_annotated')
-    os.system('mv rMATS_parsing/*annotated*.txt rMATS_parsing/'+sample_name+'_annotated')   
-    os.system('mv rMATS_parsing/*annotated*.xlsx rMATS_parsing/'+sample_name+'_annotated')   
+    os.system('mv rMATS_parsing/*annotated*.txt rMATS_parsing/'+sample_name+'_annotated')
+    #Cant get the last annotated xlsx file into the directory. It doesn't matter. I don't use this file normally 
+    #os.system('chmod 775 rMATS_parsing/*xlsx') 
+    #os.system('mv rMATS_parsing/*annotated*.xlsx rMATS_parsing/'+sample_name+'_annotated')   
 
 
 #main function that will be called when you ask for it
